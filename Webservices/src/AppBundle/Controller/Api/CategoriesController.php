@@ -1,7 +1,6 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: ricar
+ * Created by Ricardo Pereira. 
  * Date: 17/09/2017
  * Time: 19:41
  */
@@ -94,8 +93,9 @@ class CategoriesController extends Controller
     public function newCategory(Request $request) {
         $data = json_decode($request->getContent(), true);
 
-        if ($this->saveCategory($data)) {
-            return new Response("Category created succesfully");
+        $result = $this->saveCategory($data);
+        if ($result) {
+            return new Response($result);
         } else {
             return new Response("Error creating category");
         }
@@ -107,26 +107,38 @@ class CategoriesController extends Controller
 
         /* check connection */
         if (mysqli_connect_errno()) {
-            return false;
+            return "Error establishing database connection";
         }
 
         $node_name = mysqli_real_escape_string($con, $data['node_name']);
-        if ($data['parent_id']) {
+
+        if (strlen($node_name) > 200) {
+            return "node_name is too big, please send a node_name with a maximum of 200 characters";
+        }
+
+        if (isset($data['parent_id'])) {
            $parent_id = mysqli_real_escape_string($con, $data['parent_id']);
         } else {
             $parent_id = 0;
         }
-
+        if (isset($data['position'])) {
+            $chosenPosition = mysqli_real_escape_string($con, $data['position']);
+        } else {
+            $chosenPosition = 0;
+        }
         $position = $this->getLastPosition($parent_id) + 1;
         $query = "insert into categories (parent_id, node_name, position) values (".$parent_id.", '".$node_name."', ".$position.")";
         $result = mysqli_query($con, $query);
 
         mysqli_close($con);
 
-        if ($data['position']) {
+        if ($chosenPosition > 0) {
             $this->changePosition($data);
         }
 
+        if ($result) {
+            return "Category created succesfully";
+        }
         return $result;
     }
 
@@ -178,13 +190,13 @@ class CategoriesController extends Controller
         $parent_id = null;
         $node_name = null;
         if ($data) {
-            if ($data['parent_id'] != null) {
+            if (isset($data['parent_id'])) {
                 $parent_id = mysqli_real_escape_string($con, $data['parent_id']);
             }
-            if ($data['node_name'] != null) {
+            if (isset($data['node_name'])) {
                 $node_name = mysqli_real_escape_string($con, $data['node_name']);
             }
-            if ($data['node_id'] != null) {
+            if (isset($data['node_id'])) {
                 $node_id = mysqli_real_escape_string($con, $data['node_id']);
             }
         }
